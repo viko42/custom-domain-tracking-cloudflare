@@ -1,5 +1,9 @@
 # Custom Domain Tracking
 
+![Main Page](screenshots/main-page.png)
+![Link Generator](screenshots/link-generator.png)
+![Tutorial](screenshots/tutorial.png)
+
 A Cloudflare Workers-based system that lets your users track email opens and link clicks through their own custom domains, improving deliverability, branding, and domain reputation.
 
 ## What It Does
