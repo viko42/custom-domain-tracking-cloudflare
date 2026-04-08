@@ -4,6 +4,8 @@
 
 A Cloudflare Workers-based system that lets your users track email opens and link clicks through their own custom domains, improving deliverability, branding, and domain reputation.
 
+> **Note:** A frontend dashboard is included for testing and demonstration purposes. You don't need it in production just use the SDK and Worker directly from your backend.
+
 ## What It Does
 
 When you send emails on behalf of your users, tracking links typically point to your shared domain. This system lets each user bring their own domain (e.g., `track.theirdomain.com`) for tracking pixels and click redirects, all managed automatically via Cloudflare for SaaS.
