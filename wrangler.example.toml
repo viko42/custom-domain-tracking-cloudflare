@@ -15,6 +15,9 @@ FALLBACK_ORIGIN = "fallback.yourdomain.com"
 #   CF_ZONE_ID
 #   WEBHOOK_URL
 #   WEBHOOK_SECRET
+#   WEBHOOK_DEAD_LETTER_URL (optional)
+#   RATE_LIMIT_REDIS_URL (optional — Upstash REST URL, e.g. https://xxx.upstash.io or https://user:pass@xxx.upstash.io)
+#   RATE_LIMIT_REDIS_TOKEN (optional — Bearer token, not needed if auth is in the URL)
 
 [triggers]
 crons = ["*/5 * * * *"]
