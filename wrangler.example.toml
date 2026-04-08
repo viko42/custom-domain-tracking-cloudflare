@@ -1,0 +1,20 @@
+name = "custom-domain-tracking"
+main = "src/worker/index.ts"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+
+[[kv_namespaces]]
+binding = "SUBDOMAINS"
+id = "<KV_NAMESPACE_ID>"
+
+[vars]
+FALLBACK_ORIGIN = "fallback.yourdomain.com"
+
+# Secrets (set via `wrangler secret put`):
+#   CF_API_TOKEN
+#   CF_ZONE_ID
+#   WEBHOOK_URL
+#   WEBHOOK_SECRET
+
+[triggers]
+crons = ["*/5 * * * *"]

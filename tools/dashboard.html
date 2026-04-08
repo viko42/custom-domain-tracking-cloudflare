@@ -1,0 +1,1486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Domain Tracking — Console</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0b;
+    --surface: #111113;
+    --surface-2: #1a1a1d;
+    --border: #2a2a2e;
+    --border-active: #3a3a3e;
+    --text: #e8e6e3;
+    --text-dim: #7a7872;
+    --text-muted: #4a4843;
+    --accent: #c8ff00;
+    --accent-dim: #c8ff0022;
+    --red: #ff4747;
+    --red-dim: #ff474722;
+    --orange: #ff8a00;
+    --orange-dim: #ff8a0022;
+    --green: #00d68f;
+    --green-dim: #00d68f22;
+    --blue: #4dabf7;
+    --blue-dim: #4dabf722;
+    --mono: 'JetBrains Mono', monospace;
+    --serif: 'Instrument Serif', Georgia, serif;
+    --radius: 6px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 13px;
+    line-height: 1.6;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  .app {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 40px 24px 80px;
+  }
+
+  header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    margin-bottom: 48px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  header h1 {
+    font-family: var(--serif);
+    font-weight: 400;
+    font-size: 32px;
+    letter-spacing: -0.02em;
+    line-height: 1;
+  }
+
+  header h1 em { color: var(--accent); font-style: italic; }
+
+  .status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--green);
+    display: inline-block;
+    margin-right: 6px;
+    animation: pulse 2s ease-in-out infinite;
+  }
+  .status-dot.offline { background: var(--red); animation: none; }
+
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+  .connection-status {
+    display: flex; align-items: center;
+    font-size: 11px; color: var(--text-dim);
+    text-transform: uppercase; letter-spacing: 0.08em;
+  }
+
+  /* Config */
+  .config-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 32px;
+  }
+
+  .config-panel summary {
+    cursor: pointer; font-size: 11px;
+    text-transform: uppercase; letter-spacing: 0.1em;
+    color: var(--text-dim); user-select: none;
+    list-style: none;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .config-panel summary::before { content: '▸'; transition: transform 0.2s; }
+  .config-panel[open] summary::before { transform: rotate(90deg); }
+
+  .config-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 12px; margin-top: 16px;
+  }
+  .config-grid .full-width { grid-column: 1 / -1; }
+
+  label {
+    display: block; font-size: 10px;
+    text-transform: uppercase; letter-spacing: 0.1em;
+    color: var(--text-muted); margin-bottom: 4px;
+  }
+
+  input {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 8px 10px;
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 12px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  input:focus { border-color: var(--accent); }
+  input::placeholder { color: var(--text-muted); }
+
+  /* Buttons */
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 14px;
+    font-family: var(--mono); font-size: 12px; font-weight: 500;
+    border: 1px solid var(--border); border-radius: var(--radius);
+    background: var(--surface); color: var(--text);
+    cursor: pointer; transition: all 0.15s; white-space: nowrap;
+  }
+  .btn:hover { border-color: var(--border-active); background: var(--surface-2); }
+  .btn-accent { background: var(--accent); color: var(--bg); border-color: var(--accent); }
+  .btn-accent:hover { background: #d4ff33; border-color: #d4ff33; }
+  .btn-danger { color: var(--red); border-color: var(--red-dim); }
+  .btn-danger:hover { background: var(--red-dim); border-color: var(--red); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .action-bar { display: flex; gap: 8px; align-items: center; margin-bottom: 16px; }
+  .action-bar input { flex: 1; }
+
+  /* Table */
+  .table-wrapper {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+
+  table { width: 100%; border-collapse: collapse; }
+
+  th {
+    text-align: left; font-size: 10px;
+    text-transform: uppercase; letter-spacing: 0.1em;
+    color: var(--text-muted); font-weight: 500;
+    padding: 10px 14px; background: var(--surface);
+    border-bottom: 1px solid var(--border);
+  }
+
+  td {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px; vertical-align: middle;
+  }
+  tr:last-child td { border-bottom: none; }
+  tbody tr { transition: background 0.1s; }
+  tbody tr:hover { background: var(--surface); }
+  .hostname-cell { font-weight: 600; }
+
+  /* Badges */
+  .badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 3px 8px; border-radius: 3px;
+    font-size: 11px; font-weight: 500; letter-spacing: 0.02em;
+  }
+  .badge-active { background: var(--green-dim); color: var(--green); }
+  .badge-pending, .badge-ssl_pending { background: var(--orange-dim); color: var(--orange); }
+  .badge-failed { background: var(--red-dim); color: var(--red); }
+  .badge-disconnected { background: var(--red-dim); color: var(--red); }
+  .badge-deleting { background: var(--blue-dim); color: var(--blue); }
+  .badge::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+
+  /* Drawer */
+  .drawer-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.6); z-index: 100;
+    opacity: 0; visibility: hidden; transition: all 0.2s;
+  }
+  .drawer-overlay.open { opacity: 1; visibility: visible; }
+
+  .drawer {
+    position: fixed; top: 0; right: 0; bottom: 0;
+    width: 420px; max-width: 90vw;
+    background: var(--surface);
+    border-left: 1px solid var(--border);
+    z-index: 101;
+    transform: translateX(100%);
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    overflow-y: auto; padding: 24px;
+  }
+  .drawer.open { transform: translateX(0); }
+
+  .drawer-header {
+    display: flex; justify-content: space-between;
+    align-items: flex-start; margin-bottom: 24px;
+  }
+  .drawer-header h2 {
+    font-family: var(--serif); font-weight: 400;
+    font-size: 22px; word-break: break-all;
+  }
+  .drawer-close {
+    background: none; border: none;
+    color: var(--text-dim); cursor: pointer;
+    font-size: 18px; padding: 4px;
+  }
+  .drawer-close:hover { color: var(--text); }
+
+  .detail-grid { display: grid; gap: 16px; }
+  .detail-item .value { color: var(--text); word-break: break-all; }
+  .detail-item .value.error { color: var(--red); }
+
+  .metadata-tag {
+    display: inline-flex;
+    padding: 2px 8px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    font-size: 11px; color: var(--text-dim);
+    margin: 2px 0;
+  }
+  .metadata-tag span { color: var(--text); margin-left: 4px; }
+
+  .empty-state { text-align: center; padding: 60px 20px; color: var(--text-muted); }
+  .empty-state .icon { font-size: 36px; margin-bottom: 12px; opacity: 0.3; }
+  .empty-state p { font-size: 12px; }
+
+  /* Toast */
+  .toast-container {
+    position: fixed; bottom: 20px; right: 20px;
+    z-index: 200; display: flex; flex-direction: column; gap: 8px;
+  }
+  .toast {
+    padding: 10px 16px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-family: var(--mono); font-size: 12px; color: var(--text);
+    animation: slideIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    max-width: 360px;
+  }
+  .toast.error { border-color: var(--red); color: var(--red); }
+  .toast.success { border-color: var(--green); color: var(--green); }
+
+  @keyframes slideIn {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+  }
+
+  .spinner {
+    display: inline-block; width: 14px; height: 14px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .loading-row td { text-align: center; padding: 40px; color: var(--text-muted); }
+
+  .save-note { font-size: 10px; color: var(--text-muted); margin-top: 12px; }
+
+  /* Worker check panel */
+  .check-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 20px;
+    display: none;
+  }
+  .check-panel.visible { display: block; }
+  .check-panel h3 {
+    font-size: 11px; font-weight: 400; margin-bottom: 14px;
+    color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.1em;
+  }
+  .check-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 8px 0; border-bottom: 1px solid var(--border);
+    font-size: 12px;
+  }
+  .check-item:last-child { border-bottom: none; }
+  .check-icon { font-size: 12px; width: 16px; text-align: center; flex-shrink: 0; }
+  .check-icon.pass { color: var(--text-dim); }
+  .check-icon.fail { color: var(--text-muted); }
+  .check-icon.warn { color: var(--text-muted); }
+  .check-icon.loading { color: var(--text-muted); }
+  .check-label { flex: 1; color: var(--text-dim); }
+  .check-detail { font-size: 11px; color: var(--text-muted); max-width: 50%; text-align: right; word-break: break-all; }
+  .check-panel .close-check {
+    float: right; background: none; border: none; color: var(--text-muted);
+    cursor: pointer; font-size: 16px; line-height: 1; padding: 0;
+  }
+  .check-panel .close-check:hover { color: var(--text); }
+
+  .help-hint {
+    font-size: 10px; color: var(--text-muted);
+    margin-top: 4px; line-height: 1.5;
+  }
+  .help-hint code {
+    background: var(--surface-2); padding: 1px 4px;
+    border-radius: 2px; font-size: 10px; color: var(--text-dim);
+  }
+  .help-hint a {
+    color: var(--accent); text-decoration: none; opacity: 0.8;
+  }
+  .help-hint a:hover { opacity: 1; text-decoration: underline; }
+
+  .setup-guide {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    margin-bottom: 32px;
+  }
+  .setup-guide summary {
+    cursor: pointer; font-size: 11px;
+    text-transform: uppercase; letter-spacing: 0.1em;
+    color: var(--text-dim); user-select: none;
+    list-style: none;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .setup-guide summary::before { content: '▸'; transition: transform 0.2s; }
+  .setup-guide[open] summary::before { transform: rotate(90deg); }
+  .setup-guide .step {
+    margin-top: 12px; padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .setup-guide .step:last-child { border-bottom: none; }
+  .setup-guide .step-num {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-bottom: 4px;
+  }
+  .setup-guide .step p {
+    font-size: 12px; color: var(--text-muted);
+    line-height: 1.7; margin: 0;
+  }
+  .setup-guide .step code {
+    background: var(--surface-2); padding: 1px 5px;
+    border-radius: 2px; font-size: 11px; color: var(--text-dim);
+  }
+  .setup-guide .step .path {
+    color: var(--text-dim); font-size: 11px;
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>Domain <em>Tracking</em></h1>
+    <div class="connection-status">
+      <span class="status-dot" id="statusDot"></span>
+      <span id="statusText">connecting...</span>
+    </div>
+  </header>
+
+  <details class="config-panel" id="configPanel">
+    <summary>Configuration</summary>
+    <div class="config-grid">
+      <div>
+        <label>CF API Token</label>
+        <input type="password" id="cfgApiToken" placeholder="Cloudflare API token">
+        <div class="help-hint">
+          <a href="https://dash.cloudflare.com/profile/api-tokens" target="_blank">My Profile &rarr; API Tokens &rarr; Create Token</a><br>
+          Required permissions: <code>Zone &gt; SSL and Certificates &gt; Edit</code> + <code>Account &gt; Workers KV Storage &gt; Edit</code>
+        </div>
+      </div>
+      <div>
+        <label>CF Zone ID</label>
+        <input type="text" id="cfgZoneId" placeholder="Zone ID">
+        <div class="help-hint">
+          Dashboard &rarr; select your zone &rarr; <strong>Overview</strong> page, bottom-right under <em>API</em> section
+        </div>
+      </div>
+      <div>
+        <label>CF Account ID</label>
+        <input type="text" id="cfgAccountId" placeholder="Account ID (for KV access)">
+        <div class="help-hint">
+          Same <strong>Overview</strong> page, just above Zone ID in the <em>API</em> section
+        </div>
+      </div>
+      <div>
+        <label>KV Namespace ID</label>
+        <input type="text" id="cfgKvNamespaceId" placeholder="KV namespace ID">
+        <div class="help-hint">
+          Dashboard &rarr; <strong>Workers &amp; Pages &rarr; KV</strong>, or in <code>wrangler.toml</code> under <code>[[kv_namespaces]]</code> &rarr; <code>id</code>
+        </div>
+      </div>
+      <div class="full-width">
+        <label>Webhook URL</label>
+        <input type="url" id="cfgWebhookUrl" placeholder="https://your-webhook.example.com/events">
+        <div class="help-hint">
+          Your backend endpoint that receives tracking events (opens, clicks, domain status changes)
+        </div>
+      </div>
+      <div class="full-width">
+        <label>Tracking Sign Key</label>
+        <input type="password" id="cfgSignKey" placeholder="Same value as TRACKING_SIGN_KEY secret">
+        <div id="signKeyFeedback" class="help-hint"></div>
+        <div class="help-hint">
+          Used to sign tracking IDs. Must match the <code>TRACKING_SIGN_KEY</code> secret in the worker.
+        </div>
+      </div>
+    </div>
+    <p class="save-note">Saved to localStorage automatically. Values are pre-filled from <code>.dev.vars</code> and <code>wrangler.toml</code> when available.</p>
+  </details>
+
+  <div class="config-panel" id="domainPanel" style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap">
+    <div style="flex:1;min-width:200px">
+      <label>Your Domain</label>
+      <input type="text" id="cfgUserDomain" placeholder="example.com">
+    </div>
+    <div style="min-width:140px">
+      <label>Subdomain</label>
+      <input type="text" id="cfgSubdomain" placeholder="tracking" value="tracking">
+    </div>
+    <div style="flex:1;min-width:200px;align-self:center">
+      <span style="font-size:11px;color:var(--text-muted)">Tracking domain &rarr;</span>
+      <span id="domainPreview" style="font-size:13px;color:var(--accent);font-weight:600;margin-left:4px">tracking.example.com</span>
+    </div>
+  </div>
+
+  <details class="setup-guide" id="setupGuide">
+    <summary>Setup Guide</summary>
+    <div class="step">
+      <div class="step-num">Step 1 &mdash; Create an API Token</div>
+      <p>
+        Go to <a href="https://dash.cloudflare.com/profile/api-tokens" target="_blank">Cloudflare Dashboard &rarr; My Profile &rarr; API Tokens</a> and create a token with:<br>
+        &bull; <code>Zone &gt; SSL and Certificates &gt; Edit</code> &mdash; to manage custom hostnames<br>
+        &bull; <code>Account &gt; Workers KV Storage &gt; Edit</code> &mdash; to read/write domain records<br>
+        Scope it to your specific zone.
+      </p>
+    </div>
+    <div class="step">
+      <div class="step-num">Step 2 &mdash; Get your Zone ID &amp; Account ID</div>
+      <p>
+        Go to your zone's <strong>Overview</strong> page in the Cloudflare dashboard.<br>
+        Both IDs are in the <em>API</em> section on the bottom-right sidebar.
+      </p>
+    </div>
+    <div class="step">
+      <div class="step-num">Step 3 &mdash; Create the Fallback Origin</div>
+      <p>
+        In <strong>DNS &rarr; Records</strong>, add:<br>
+        &bull; Type: <code>AAAA</code> &mdash; Name: <code>fallback</code> &mdash; Value: <code>100::</code> &mdash; Proxy: <strong>on</strong><br><br>
+        Then in <strong>SSL/TLS &rarr; Custom Hostnames</strong>, set the Fallback Origin to <code class="guide-fallback">fallback.yourdomain.com</code>.
+      </p>
+    </div>
+    <div class="step">
+      <div class="step-num">Step 4 &mdash; Create the KV Namespace</div>
+      <p>
+        Run <code>npx wrangler kv namespace create SUBDOMAINS</code> and copy the <code>id</code> into <span class="path">wrangler.toml</span>.<br>
+        The KV Namespace ID is also visible in <strong>Workers &amp; Pages &rarr; KV</strong> in the dashboard.<br><br>
+        KV stores domain records only &mdash; writes are minimal (CRUD + cron status changes), so the free plan (1,000 writes/day) handles hundreds of domains fine.<br>
+        The write limit only matters if you enable KV-based rate limiting. Use Redis instead to bypass it.
+      </p>
+    </div>
+    <div class="step">
+      <div class="step-num">Step 5 &mdash; Deploy the Worker</div>
+      <p>
+        Fill in your secrets in <span class="path">.dev.vars</span>, then run:<br>
+        <code>npm run setup-secrets</code> &mdash; pushes secrets to Cloudflare<br>
+        <code>npm run deploy</code> &mdash; validates the token and deploys the worker<br><br>
+      </p>
+    </div>
+    <div class="step">
+      <div class="step-num">Step 6 &mdash; Users add their CNAME</div>
+      <p>
+        <strong>Recommended:</strong> Ask your user to add the DNS record <em>first</em> (before calling <code>sdk.createSubdomain()</code>).<br>
+        This speeds up verification and reduces the delay.<br><br>
+        The user adds a CNAME record pointing to your fallback origin:<br>
+        &bull; Type: <code>CNAME</code> &mdash; Name: <em>(their chosen subdomain)</em> &mdash; Value: <code class="guide-fallback">fallback.yourdomain.com</code><br><br>
+        Then in your backend, call <code>sdk.createSubdomain('&lt;subdomain&gt;.&lt;user-domain&gt;')</code> with the full hostname the user configured.<br>
+        The worker's cron job verifies the domain every 5 minutes and sends a webhook when it's active.<br><br>
+        <button class="btn" style="margin-top:8px;margin-right:6px" onclick="testEndpoint('/health')">Test /health</button>
+        <button class="btn" style="margin-top:8px" onclick="testEndpoint('/t/test')">Test /t/test</button>
+      </p>
+    </div>
+  </details>
+
+  <div class="action-bar">
+    <input type="text" id="newHostname" placeholder="tracking.userdomain.com">
+    <button class="btn btn-accent" id="btnCreate" onclick="doCreate()">+ Add Domain</button>
+    <button class="btn" onclick="loadSubdomains()">Refresh</button>
+    <button class="btn" id="btnSync" onclick="doSync()">Sync CF</button>
+    <button class="btn" id="btnCheck" onclick="checkWorkerSetup()">Check Worker</button>
+  </div>
+
+  <div class="check-panel" id="checkPanel">
+    <button class="close-check" onclick="document.getElementById('checkPanel').classList.remove('visible')">&times;</button>
+    <h3>Worker Setup Check</h3>
+    <div id="checkResults"></div>
+  </div>
+
+  <details class="config-panel" id="linkGenerator">
+    <summary>Link Generator</summary>
+    <div style="margin-top:16px">
+      <div style="display:flex;gap:12px;margin-bottom:12px;flex-wrap:wrap">
+        <div style="flex:1;min-width:200px">
+          <label>Domain</label>
+          <select id="genDomain" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:8px 10px;color:var(--text);font-family:var(--mono);font-size:12px;outline:none">
+            <option value="">Select a domain...</option>
+          </select>
+        </div>
+        <div style="flex:0 0 120px">
+          <label>Type</label>
+          <select id="genType" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:8px 10px;color:var(--text);font-family:var(--mono);font-size:12px;outline:none">
+            <option value="pixel">Pixel /t/</option>
+            <option value="redirect">Redirect /r/</option>
+          </select>
+        </div>
+        <div style="flex:0 0 120px">
+          <label>Format</label>
+          <select id="genFormat" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:8px 10px;color:var(--text);font-family:var(--mono);font-size:12px;outline:none">
+            <option value="packed">Packed (safe)</option>
+            <option value="dotted">Dotted</option>
+          </select>
+        </div>
+      </div>
+      <div id="genRedirectRow" style="display:none;margin-bottom:12px">
+        <label>Redirect URL</label>
+        <input type="url" id="genRedirectUrl" placeholder="https://example.com/landing-page">
+        <div style="margin-top:8px;display:flex;align-items:center;gap:12px">
+          <label style="margin-bottom:0;display:flex;align-items:center;gap:6px;cursor:pointer">
+            <input type="radio" name="genUrlMode" value="embedded" checked> Embedded in token
+          </label>
+          <label style="margin-bottom:0;display:flex;align-items:center;gap:6px;cursor:pointer">
+            <input type="radio" name="genUrlMode" value="query"> Query parameter
+          </label>
+          <span style="color:var(--text-muted);font-size:11px">How the destination URL is included</span>
+        </div>
+      </div>
+      <div style="margin-bottom:12px">
+        <label>Payload (JSON)</label>
+        <textarea id="genPayload" rows="4" placeholder='{"userId": "abc-123", "campaignId": "welcome-email"}' style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:8px 10px;color:var(--text);font-family:var(--mono);font-size:12px;outline:none;resize:vertical"></textarea>
+      </div>
+      <button class="btn btn-accent" onclick="generateLink()">Generate</button>
+      <div id="genResult" style="display:none;margin-top:16px">
+        <label>Generated URL</label>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input type="text" id="genUrl" readonly style="flex:1;cursor:text">
+          <button class="btn" onclick="copyGenUrl()">Copy</button>
+          <button class="btn" onclick="window.open(document.getElementById('genUrl').value,'_blank')">Open</button>
+        </div>
+        <div id="genPixelHtml" style="margin-top:8px;display:none">
+          <label>HTML Pixel</label>
+          <input type="text" id="genHtml" readonly style="width:100%;cursor:text;font-size:11px">
+        </div>
+      </div>
+    </div>
+  </details>
+
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>Hostname</th>
+          <th>Status</th>
+          <th>SSL</th>
+          <th>Created</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="tableBody">
+        <tr class="loading-row"><td colspan="5"><span class="spinner"></span></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="drawer-overlay" id="drawerOverlay" onclick="closeDrawer()"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-header">
+    <h2 id="drawerHostname"></h2>
+    <button class="drawer-close" onclick="closeDrawer()">&times;</button>
+  </div>
+  <div class="detail-grid" id="drawerContent"></div>
+  <div style="margin-top: 24px; display: flex; gap: 8px;">
+    <button class="btn" id="drawerRefresh">&#8635; Refresh</button>
+    <button class="btn btn-danger" id="drawerDelete">Delete Domain</button>
+  </div>
+</div>
+
+<div class="toast-container" id="toasts"></div>
+
+<script>
+  // ── Config (persisted to localStorage) ──────────────────────────
+  const CFG_KEY = 'cdt_config_v2';
+  const cfgEls = {};
+
+  function getConfig() {
+    return {
+      apiToken:      cfgEls.apiToken?.value || '',
+      zoneId:        cfgEls.zoneId?.value || '',
+      accountId:     cfgEls.accountId?.value || '',
+      kvNamespaceId: cfgEls.kvNamespaceId?.value || '',
+      webhookUrl:    cfgEls.webhookUrl?.value || '',
+      signKey:       cfgEls.signKey?.value || '',
+      userDomain:    cfgEls.userDomain?.value || '',
+      subdomain:     cfgEls.subdomain?.value || 'tracking',
+    };
+  }
+
+  // Returns { ok, issues[] } — same rules as validateWebhookSecret in src/worker/index.ts
+  function validateSignKey(key) {
+    const issues = [];
+    if (!key) return { ok: false, issues: ['not set'] };
+    if (key.length < 20) issues.push('at least 20 characters');
+    if (!/[a-z]/.test(key)) issues.push('lowercase letters');
+    if (!/[A-Z]/.test(key)) issues.push('uppercase letters');
+    if (!/[0-9]/.test(key)) issues.push('numbers');
+    if (!/[^a-zA-Z0-9]/.test(key)) issues.push('symbols');
+    return { ok: issues.length === 0, issues };
+  }
+
+  function updateSignKeyFeedback() {
+    const el = document.getElementById('signKeyFeedback');
+    if (!el) return;
+    const key = cfgEls.signKey?.value || '';
+    if (!key) {
+      el.style.color = 'var(--warning, #f59e0b)';
+      el.textContent = '⚠ Required — enter the TRACKING_SIGN_KEY you configured as a worker secret.';
+      return;
+    }
+    const { ok, issues } = validateSignKey(key);
+    if (ok) {
+      el.style.color = 'var(--success, #22c55e)';
+      el.textContent = '✓ Key looks strong';
+    } else {
+      el.style.color = 'var(--warning, #f59e0b)';
+      el.textContent = '⚠ Weak key — missing: ' + issues.join(', ') + '. Use 20+ chars, mixed case, numbers & symbols.';
+    }
+  }
+
+  function getTrackingDomain() {
+    const c = getConfig();
+    const domain = c.userDomain || 'yourdomain.com';
+    const sub = c.subdomain || 'tracking';
+    return sub + '.' + domain;
+  }
+
+  function updateDomainPreview() {
+    const full = getTrackingDomain();
+    document.getElementById('domainPreview').textContent = full;
+    // Update setup guide
+    document.querySelectorAll('.guide-full-domain').forEach(el => el.textContent = full);
+    const c = getConfig();
+    const domain = c.userDomain || 'yourdomain.com';
+    document.querySelectorAll('.guide-fallback').forEach(el => el.textContent = 'fallback.' + domain);
+    document.querySelectorAll('.guide-subdomain').forEach(el => el.textContent = c.subdomain || 'tracking');
+  }
+
+  function testEndpoint(path) {
+    const c = getConfig();
+    if (!c.userDomain) { toast('Enter your domain first', 'error'); return; }
+    const url = 'https://' + getTrackingDomain() + path;
+    window.open(url, '_blank');
+  }
+
+  function saveConfig() { localStorage.setItem(CFG_KEY, JSON.stringify(getConfig())); }
+
+  function loadConfig() {
+    try {
+      const c = JSON.parse(localStorage.getItem(CFG_KEY) || '{}');
+      Object.keys(c).forEach(k => { if (cfgEls[k] && c[k]) cfgEls[k].value = c[k]; });
+    } catch {}
+  }
+
+  function requireConfig() {
+    const c = getConfig();
+    if (!c.apiToken || !c.zoneId || !c.accountId || !c.kvNamespaceId) {
+      document.getElementById('configPanel').open = true;
+      throw new Error('Fill in all config fields first');
+    }
+    return c;
+  }
+
+  // ── Cloudflare REST helpers (mirrors src/sdk/client.ts) ─────────
+  // All CF API calls go through /proxy to avoid CORS issues
+  const CF = 'https://api.cloudflare.com/client/v4';
+  const PROXY = '/proxy';
+
+  async function cfFetch(path, opts = {}) {
+    const c = requireConfig();
+    const targetUrl = CF + path;
+    const res = await fetch(PROXY, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        url: targetUrl,
+        method: opts.method || 'GET',
+        headers: {
+          'Authorization': 'Bearer ' + c.apiToken,
+          'Content-Type': 'application/json',
+        },
+        body: opts.body ? JSON.parse(opts.body) : undefined,
+      }),
+    });
+    const data = await res.json();
+    if (!data.success) {
+      const msg = (data.errors || []).map(e => e.message).join(', ') || 'CF API error';
+      throw new Error(msg);
+    }
+    return data;
+  }
+
+  // Custom Hostnames API
+  function cfCreateHostname(hostname) {
+    const c = getConfig();
+    return cfFetch(`/zones/${c.zoneId}/custom_hostnames`, {
+      method: 'POST',
+      body: JSON.stringify({
+        hostname,
+        ssl: { method: 'http', type: 'dv', settings: { min_tls_version: '1.2' } },
+      }),
+    });
+  }
+
+  function cfGetHostname(cfId) {
+    const c = getConfig();
+    return cfFetch(`/zones/${c.zoneId}/custom_hostnames/${cfId}`);
+  }
+
+  function cfDeleteHostname(cfId) {
+    const c = getConfig();
+    return cfFetch(`/zones/${c.zoneId}/custom_hostnames/${cfId}`, { method: 'DELETE' });
+  }
+
+  async function cfListHostnames() {
+    const c = getConfig();
+    const all = [];
+    let page = 1;
+    while (true) {
+      const data = await cfFetch(`/zones/${c.zoneId}/custom_hostnames?page=${page}&per_page=50`);
+      all.push(...(data.result || []));
+      if (!data.result_info || page >= data.result_info.total_pages) break;
+      page++;
+    }
+    return all;
+  }
+
+  // KV API (mirrors src/sdk/kv.ts)
+  function kvBase() {
+    const c = getConfig();
+    return `/accounts/${c.accountId}/storage/kv/namespaces/${c.kvNamespaceId}`;
+  }
+
+  async function kvGet(key) {
+    const c = requireConfig();
+    const targetUrl = CF + kvBase() + '/values/' + encodeURIComponent(key);
+    const res = await fetch(PROXY, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        url: targetUrl,
+        method: 'GET',
+        headers: { 'Authorization': 'Bearer ' + c.apiToken },
+      }),
+    });
+    const text = await res.text();
+    try {
+      const data = JSON.parse(text);
+      // CF returns { success: false, errors: [{ code: 10009 }] } for missing keys
+      if (data && data.success === false) return null;
+      return data;
+    } catch {
+      // Raw value (non-JSON) — shouldn't happen in our case
+      return null;
+    }
+  }
+
+  async function kvPut(key, value) {
+    const c = requireConfig();
+    const targetUrl = CF + kvBase() + '/values/' + encodeURIComponent(key);
+    const res = await fetch(PROXY, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        url: targetUrl,
+        method: 'PUT',
+        headers: { 'Authorization': 'Bearer ' + c.apiToken, 'Content-Type': 'application/json' },
+        body: value,
+      }),
+    });
+    if (!res.ok) throw new Error('KV write failed: ' + res.status);
+  }
+
+  async function kvDelete(key) {
+    const c = requireConfig();
+    const targetUrl = CF + kvBase() + '/values/' + encodeURIComponent(key);
+    const res = await fetch(PROXY, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        url: targetUrl,
+        method: 'DELETE',
+        headers: { 'Authorization': 'Bearer ' + c.apiToken },
+      }),
+    });
+    if (!res.ok) throw new Error('KV delete failed: ' + res.status);
+  }
+
+  // ── SDK logic (mirrors src/sdk/index.ts) ────────────────────────
+  async function sdkList() {
+    const hostnames = (await kvGet('index:all')) || [];
+    const records = await Promise.all(
+      hostnames.map(h => kvGet('subdomain:' + h))
+    );
+    return records.filter(Boolean);
+  }
+
+  async function sdkCreate(hostname, metadata = {}) {
+    const existing = await kvGet('subdomain:' + hostname);
+    if (existing) throw new Error('Subdomain ' + hostname + ' already exists');
+
+    const resp = await cfCreateHostname(hostname);
+    const cfHostname = resp.result;
+    const now = new Date().toISOString();
+
+    const record = {
+      hostname,
+      cfCustomHostnameId: cfHostname.id,
+      status: 'pending',
+      previousStatus: null,
+      createdAt: now,
+      updatedAt: now,
+      sslStatus: cfHostname.ssl.status,
+      verificationErrors: [],
+      metadata,
+    };
+
+    await kvPut('subdomain:' + hostname, record);
+
+    // Update index
+    const index = (await kvGet('index:all')) || [];
+    if (!index.includes(hostname)) {
+      index.push(hostname);
+      await kvPut('index:all', index);
+    }
+
+    return record;
+  }
+
+  async function sdkGet(hostname) {
+    return kvGet('subdomain:' + hostname);
+  }
+
+  async function sdkDelete(hostname) {
+    const record = await kvGet('subdomain:' + hostname);
+    if (!record) throw new Error('Subdomain ' + hostname + ' not found');
+
+    await cfDeleteHostname(record.cfCustomHostnameId);
+    await kvDelete('subdomain:' + hostname);
+
+    // Update index
+    const index = (await kvGet('index:all')) || [];
+    const filtered = index.filter(h => h !== hostname);
+    await kvPut('index:all', filtered);
+  }
+
+  // ── Refresh a single hostname from CF API → KV ───────────────
+  async function sdkRefresh(hostname) {
+    const record = await kvGet('subdomain:' + hostname);
+    if (!record) throw new Error('No KV record for ' + hostname);
+
+    const data = await cfGetHostname(record.cfCustomHostnameId);
+    const cf = data.result;
+    const now = new Date().toISOString();
+
+    let status = record.status;
+    if (cf.status === 'active' && cf.ssl?.status === 'active') status = 'active';
+    else if (cf.ssl?.status === 'pending_validation' || cf.ssl?.status === 'initializing') status = 'ssl_pending';
+    else if (cf.status === 'pending') status = 'pending';
+    else if (cf.status === 'moved' || cf.status === 'deleted') status = 'disconnected';
+
+    const updated = {
+      ...record,
+      status,
+      previousStatus: record.status !== status ? record.status : record.previousStatus,
+      sslStatus: cf.ssl?.status || record.sslStatus,
+      verificationErrors: cf.verification_errors || [],
+      updatedAt: now,
+    };
+
+    await kvPut('subdomain:' + hostname, updated);
+    return updated;
+  }
+
+  // ── Sync: reconcile Cloudflare Custom Hostnames → KV ──────────
+  async function sdkSync() {
+    const cfHostnames = await cfListHostnames();
+    const kvIndex = (await kvGet('index:all')) || [];
+    const now = new Date().toISOString();
+    let synced = 0;
+
+    for (const cf of cfHostnames) {
+      const hostname = cf.hostname;
+      const existing = await kvGet('subdomain:' + hostname);
+
+      if (!existing) {
+        // Hostname exists in CF but not in KV — create KV record
+        const sslStatus = cf.ssl?.status || 'unknown';
+        let status = 'pending';
+        if (cf.status === 'active' && sslStatus === 'active') status = 'active';
+        else if (sslStatus === 'pending_validation' || sslStatus === 'initializing') status = 'ssl_pending';
+
+        const record = {
+          hostname,
+          cfCustomHostnameId: cf.id,
+          status,
+          previousStatus: null,
+          createdAt: cf.created_at || now,
+          updatedAt: now,
+          sslStatus,
+          verificationErrors: cf.verification_errors || [],
+          metadata: {},
+        };
+        await kvPut('subdomain:' + hostname, record);
+        if (!kvIndex.includes(hostname)) kvIndex.push(hostname);
+        synced++;
+      } else {
+        // Update existing KV record with latest CF status
+        const sslStatus = cf.ssl?.status || existing.sslStatus;
+        let status = existing.status;
+        if (cf.status === 'active' && cf.ssl?.status === 'active') status = 'active';
+        else if (cf.ssl?.status === 'pending_validation' || cf.ssl?.status === 'initializing') status = 'ssl_pending';
+
+        const updated = {
+          ...existing,
+          status,
+          previousStatus: existing.status !== status ? existing.status : existing.previousStatus,
+          sslStatus,
+          verificationErrors: cf.verification_errors || existing.verificationErrors || [],
+          updatedAt: now,
+        };
+        await kvPut('subdomain:' + hostname, updated);
+      }
+    }
+
+    // Update index with any new hostnames
+    await kvPut('index:all', kvIndex);
+    return { total: cfHostnames.length, synced };
+  }
+
+  // ── UI ──────────────────────────────────────────────────────────
+  let subdomains = [];
+
+  function toast(msg, type = 'info') {
+    const el = document.createElement('div');
+    el.className = 'toast ' + type;
+    el.textContent = msg;
+    document.getElementById('toasts').appendChild(el);
+    setTimeout(() => el.remove(), 4000);
+  }
+
+  function setStatus(online) {
+    document.getElementById('statusDot').className = 'status-dot' + (online ? '' : ' offline');
+    document.getElementById('statusText').textContent = online ? 'connected' : 'offline';
+  }
+
+  async function loadSubdomains() {
+    const tbody = document.getElementById('tableBody');
+    tbody.innerHTML = '<tr class="loading-row"><td colspan="5"><span class="spinner"></span></td></tr>';
+    try {
+      subdomains = await sdkList();
+      renderTable();
+      populateDomainSelect();
+      setStatus(true);
+    } catch (e) {
+      setStatus(false);
+      tbody.innerHTML = '';
+      toast(e.message, 'error');
+    }
+  }
+
+  function renderTable() {
+    const tbody = document.getElementById('tableBody');
+    if (!subdomains.length) {
+      tbody.innerHTML = '<tr><td colspan="5"><div class="empty-state"><div class="icon">&#9671;</div><p>No domains yet. Add one above.</p></div></td></tr>';
+      return;
+    }
+    tbody.innerHTML = subdomains
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+      .map(s => `
+        <tr onclick="openDrawer('${esc(s.hostname)}')" style="cursor:pointer">
+          <td class="hostname-cell">${esc(s.hostname)}</td>
+          <td><span class="badge badge-${s.status}">${s.status}</span></td>
+          <td style="color:var(--text-dim)">${s.sslStatus || '\u2014'}</td>
+          <td style="color:var(--text-dim)">${timeAgo(s.createdAt)}</td>
+          <td style="white-space:nowrap">
+            <button class="btn" style="padding:4px 8px;font-size:11px"
+              onclick="doRefresh('${esc(s.hostname)}',event)" title="Refresh from Cloudflare">&#8635;</button>
+            <button class="btn btn-danger" style="padding:4px 8px;font-size:11px"
+              onclick="event.stopPropagation();doDelete('${esc(s.hostname)}')">&#10005;</button>
+          </td>
+        </tr>
+      `).join('');
+  }
+
+  async function doCreate() {
+    const input = document.getElementById('newHostname');
+    const hostname = input.value.trim();
+    if (!hostname) return;
+    const btn = document.getElementById('btnCreate');
+    btn.disabled = true;
+    try {
+      await sdkCreate(hostname);
+      toast('Created ' + hostname, 'success');
+      input.value = '';
+      await loadSubdomains();
+    } catch (e) {
+      toast(e.message, 'error');
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  async function doRefresh(hostname, e) {
+    if (e) e.stopPropagation();
+    try {
+      await sdkRefresh(hostname);
+      toast('Refreshed ' + hostname, 'success');
+      await loadSubdomains();
+      // If drawer is open for this hostname, reopen it with fresh data
+      if (document.getElementById('drawer').classList.contains('open') &&
+          document.getElementById('drawerHostname').textContent === hostname) {
+        openDrawer(hostname);
+      }
+    } catch (err) {
+      toast('Refresh failed: ' + err.message, 'error');
+    }
+  }
+
+  async function doSync() {
+    const btn = document.getElementById('btnSync');
+    btn.disabled = true;
+    btn.textContent = 'Syncing...';
+    try {
+      const { total, synced } = await sdkSync();
+      toast(`Synced ${total} hostname(s) from Cloudflare (${synced} new)`, 'success');
+      await loadSubdomains();
+    } catch (e) {
+      toast('Sync failed: ' + e.message, 'error');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Sync CF';
+    }
+  }
+
+  async function doDelete(hostname) {
+    if (!confirm('Delete ' + hostname + '?')) return;
+    try {
+      await sdkDelete(hostname);
+      toast('Deleted ' + hostname, 'success');
+      closeDrawer();
+      await loadSubdomains();
+    } catch (e) {
+      toast(e.message, 'error');
+    }
+  }
+
+  function openDrawer(hostname) {
+    const s = subdomains.find(x => x.hostname === hostname);
+    if (!s) return;
+    document.getElementById('drawerHostname').textContent = s.hostname;
+    const meta = Object.entries(s.metadata || {});
+    document.getElementById('drawerContent').innerHTML = `
+      <div class="detail-item">
+        <label>Status</label>
+        <div class="value"><span class="badge badge-${s.status}">${s.status}</span></div>
+      </div>
+      <div class="detail-item">
+        <label>Custom Hostname ID</label>
+        <div class="value" style="font-size:11px;color:var(--text-dim)">${s.cfCustomHostnameId}</div>
+      </div>
+      <div class="detail-item">
+        <label>SSL Status</label>
+        <div class="value">${s.sslStatus || '\u2014'}</div>
+      </div>
+      <div class="detail-item">
+        <label>Created</label>
+        <div class="value">${new Date(s.createdAt).toLocaleString()}</div>
+      </div>
+      <div class="detail-item">
+        <label>Updated</label>
+        <div class="value">${new Date(s.updatedAt).toLocaleString()}</div>
+      </div>
+      ${s.verificationErrors?.length ? `
+        <div class="detail-item">
+          <label>Verification Errors</label>
+          <div class="value error">${s.verificationErrors.map(esc).join('<br>')}</div>
+        </div>
+      ` : ''}
+      <div class="detail-item">
+        <label>Metadata</label>
+        ${meta.length ? meta.map(([k,v]) =>
+          `<div class="metadata-tag">${esc(k)}:<span>${esc(v)}</span></div>`
+        ).join('') : '<div class="value" style="color:var(--text-muted)">none</div>'}
+      </div>
+    `;
+    document.getElementById('drawerRefresh').onclick = () => doRefresh(s.hostname);
+    document.getElementById('drawerDelete').onclick = () => doDelete(s.hostname);
+    document.getElementById('drawerOverlay').classList.add('open');
+    document.getElementById('drawer').classList.add('open');
+  }
+
+  function closeDrawer() {
+    document.getElementById('drawerOverlay').classList.remove('open');
+    document.getElementById('drawer').classList.remove('open');
+  }
+
+  function esc(s) {
+    const d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+  }
+
+  function timeAgo(iso) {
+    const diff = Date.now() - new Date(iso).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 1) return 'just now';
+    if (mins < 60) return mins + 'm ago';
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return hrs + 'h ago';
+    return Math.floor(hrs / 24) + 'd ago';
+  }
+
+  // ── Signing (mirrors src/sdk/signing.ts) ────────────────────────
+  function toBase64Url(buffer) {
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    for (const b of bytes) binary += String.fromCharCode(b);
+    return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+  }
+
+  async function deriveDomainKey(secret, hostname) {
+    const enc = new TextEncoder();
+    const masterKey = await crypto.subtle.importKey(
+      'raw', enc.encode(secret),
+      { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+    );
+    const derived = await crypto.subtle.sign('HMAC', masterKey, enc.encode(hostname));
+    return crypto.subtle.importKey(
+      'raw', derived,
+      { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+    );
+  }
+
+  async function signPayload(secret, hostname, payload, format = 'packed') {
+    const enc = new TextEncoder();
+    const key = await deriveDomainKey(secret, hostname);
+    const payloadB64 = toBase64Url(enc.encode(JSON.stringify(payload)));
+    const sig = await crypto.subtle.sign('HMAC', key, enc.encode(payloadB64));
+    const dotted = payloadB64 + '.' + toBase64Url(sig);
+    if (format === 'packed') {
+      return toBase64Url(enc.encode(dotted));
+    }
+    return dotted;
+  }
+
+  // ── Link Generator ────────────────────────────────────────────
+  document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('genType').addEventListener('change', e => {
+      document.getElementById('genRedirectRow').style.display = e.target.value === 'redirect' ? '' : 'none';
+    });
+  });
+
+  function populateDomainSelect() {
+    const sel = document.getElementById('genDomain');
+    const current = sel.value;
+    sel.innerHTML = '<option value="">Select a domain...</option>';
+    for (const s of subdomains) {
+      if (s.status === 'active') {
+        sel.innerHTML += `<option value="${esc(s.hostname)}">${esc(s.hostname)}</option>`;
+      }
+    }
+    if (current) sel.value = current;
+  }
+
+  async function generateLink() {
+    const c = getConfig();
+    if (!c.signKey) {
+      toast('Set Tracking Sign Key in config first', 'error');
+      document.getElementById('configPanel').open = true;
+      return;
+    }
+    const domain = document.getElementById('genDomain').value;
+    if (!domain) { toast('Select a domain', 'error'); return; }
+
+    const type = document.getElementById('genType').value;
+    const payloadText = document.getElementById('genPayload').value.trim();
+
+    let payload;
+    try {
+      payload = payloadText ? JSON.parse(payloadText) : {};
+    } catch {
+      toast('Invalid JSON payload', 'error');
+      return;
+    }
+
+    const format = document.getElementById('genFormat').value;
+    const token = await signPayload(c.signKey, domain, payload, format);
+    const prefix = type === 'pixel' ? '/t/' : '/r/';
+    let url = 'https://' + domain + prefix + encodeURIComponent(token);
+
+    if (type === 'redirect') {
+      const redirectUrl = document.getElementById('genRedirectUrl').value.trim();
+      if (!redirectUrl) { toast('Enter a redirect URL', 'error'); return; }
+      try {
+        const parsed = new URL(redirectUrl);
+        if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+          toast('Redirect URL must use http:// or https://', 'error'); return;
+        }
+      } catch {
+        toast('Invalid redirect URL', 'error'); return;
+      }
+      const urlMode = document.querySelector('input[name="genUrlMode"]:checked').value;
+      if (urlMode === 'embedded') {
+        payload.url = redirectUrl;
+        const tokenWithUrl = await signPayload(c.signKey, domain, payload, format);
+        url = 'https://' + domain + '/r/' + encodeURIComponent(tokenWithUrl);
+      } else {
+        url += '?url=' + encodeURIComponent(redirectUrl);
+      }
+    }
+
+    document.getElementById('genUrl').value = url;
+    document.getElementById('genResult').style.display = '';
+
+    const pixelDiv = document.getElementById('genPixelHtml');
+    if (type === 'pixel') {
+      document.getElementById('genHtml').value = `<img src="${url}" width="1" height="1" alt="" style="display:none">`;
+      pixelDiv.style.display = '';
+    } else {
+      pixelDiv.style.display = 'none';
+    }
+  }
+
+  function copyGenUrl() {
+    const url = document.getElementById('genUrl').value;
+    navigator.clipboard.writeText(url).then(() => toast('Copied', 'success'));
+  }
+
+  // ── Worker Setup Check ──────────────────────────────────────────
+  async function checkWorkerSetup() {
+    const btn = document.getElementById('btnCheck');
+    btn.disabled = true;
+    btn.textContent = 'Checking...';
+
+    const panel = document.getElementById('checkPanel');
+    const results = document.getElementById('checkResults');
+    panel.classList.add('visible');
+
+    const checks = [
+      { id: 'config', label: 'Dashboard config complete' },
+      { id: 'signkey', label: 'Tracking Sign Key configured & strong' },
+      { id: 'kv', label: 'KV namespace accessible' },
+      { id: 'health', label: 'Worker deployed & /health responding' },
+      { id: 'fallback', label: 'Custom Hostnames fallback origin set' },
+    ];
+
+    // Render initial loading state
+    results.innerHTML = checks.map(c =>
+      `<div class="check-item" id="check-${c.id}">
+        <span class="check-icon loading">&#9679;</span>
+        <span class="check-label">${c.label}</span>
+        <span class="check-detail" id="check-${c.id}-detail">checking...</span>
+      </div>`
+    ).join('');
+
+    function setCheck(id, status, detail) {
+      const icon = document.querySelector(`#check-${id} .check-icon`);
+      const detailEl = document.getElementById(`check-${id}-detail`);
+      icon.className = 'check-icon ' + status;
+      icon.innerHTML = status === 'pass' ? '&#10003;' : status === 'fail' ? '&#10007;' : '&#9888;';
+      detailEl.textContent = detail;
+    }
+
+    // 1. Config check
+    const c = getConfig();
+    const configOk = c.apiToken && c.zoneId && c.accountId && c.kvNamespaceId;
+    setCheck('config', configOk ? 'pass' : 'fail',
+      configOk ? 'All fields set' : 'Missing: ' + [
+        !c.apiToken && 'API Token',
+        !c.zoneId && 'Zone ID',
+        !c.accountId && 'Account ID',
+        !c.kvNamespaceId && 'KV Namespace ID',
+      ].filter(Boolean).join(', '));
+
+    if (!configOk) {
+      ['signkey', 'kv', 'health', 'fallback'].forEach(id => setCheck(id, 'warn', 'skipped (config incomplete)'));
+      btn.disabled = false;
+      btn.textContent = 'Check Worker';
+      return;
+    }
+
+    // 1b. Sign key check
+    const { ok: signKeyOk, issues: signKeyIssues } = validateSignKey(c.signKey);
+    if (!c.signKey) {
+      setCheck('signkey', 'fail', 'Not set — enter your TRACKING_SIGN_KEY in the config above');
+    } else if (signKeyOk) {
+      setCheck('signkey', 'pass', 'Key is strong');
+    } else {
+      setCheck('signkey', 'warn', 'Weak — missing: ' + signKeyIssues.join(', '));
+    }
+
+    // Run remaining checks in parallel
+    const kvCheck = (async () => {
+      try {
+        const targetUrl = CF + `/accounts/${c.accountId}/storage/kv/namespaces/${c.kvNamespaceId}`;
+        const res = await fetch(PROXY, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            url: targetUrl,
+            method: 'GET',
+            headers: { 'Authorization': 'Bearer ' + c.apiToken },
+          }),
+        });
+        const data = await res.json();
+        if (data.success && data.result) {
+          setCheck('kv', 'pass', data.result.title || 'Namespace found');
+        } else {
+          const msg = (data.errors || []).map(e => e.message).join(', ') || 'Not found';
+          setCheck('kv', 'fail', msg);
+        }
+      } catch (e) {
+        setCheck('kv', 'fail', e.message);
+      }
+    })();
+
+    const healthCheck = (async () => {
+      try {
+        if (!c.userDomain) {
+          setCheck('health', 'warn', 'Set your domain first');
+          return;
+        }
+        const trackingDomain = getTrackingDomain();
+        const healthUrl = 'https://' + trackingDomain + '/health';
+        // Use proxy to avoid CORS
+        const res = await fetch(PROXY, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            url: healthUrl,
+            method: 'GET',
+            headers: {},
+          }),
+        });
+        const text = await res.text();
+        if (res.ok && text.trim() === 'OK') {
+          setCheck('health', 'pass', trackingDomain + ' -> OK');
+        } else if (res.ok) {
+          setCheck('health', 'warn', 'Responded but unexpected body: ' + text.slice(0, 60));
+        } else {
+          setCheck('health', 'fail', 'HTTP ' + res.status);
+        }
+      } catch (e) {
+        setCheck('health', 'fail', e.message);
+      }
+    })();
+
+    const fallbackCheck = (async () => {
+      try {
+        // Check the fallback origin setting via CF API
+        const targetUrl = CF + `/zones/${c.zoneId}/custom_hostnames/fallback_origin`;
+        const res = await fetch(PROXY, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            url: targetUrl,
+            method: 'GET',
+            headers: { 'Authorization': 'Bearer ' + c.apiToken, 'Content-Type': 'application/json' },
+          }),
+        });
+        const data = await res.json();
+        if (data.success && data.result && data.result.origin) {
+          const origin = data.result.origin;
+          const status = data.result.status;
+          if (status === 'active') {
+            setCheck('fallback', 'pass', origin + ' (active)');
+          } else {
+            setCheck('fallback', 'warn', origin + ' (status: ' + status + ')');
+          }
+        } else {
+          const msg = (data.errors || []).map(e => e.message).join(', ') || 'No fallback origin configured';
+          setCheck('fallback', 'fail', msg);
+        }
+      } catch (e) {
+        setCheck('fallback', 'fail', e.message);
+      }
+    })();
+
+    await Promise.allSettled([kvCheck, healthCheck, fallbackCheck]);
+
+    btn.disabled = false;
+    btn.textContent = 'Check Worker';
+  }
+
+  // ── Init ────────────────────────────────────────────────────────
+  document.addEventListener('DOMContentLoaded', () => {
+    cfgEls.apiToken      = document.getElementById('cfgApiToken');
+    cfgEls.zoneId        = document.getElementById('cfgZoneId');
+    cfgEls.accountId     = document.getElementById('cfgAccountId');
+    cfgEls.kvNamespaceId = document.getElementById('cfgKvNamespaceId');
+    cfgEls.webhookUrl    = document.getElementById('cfgWebhookUrl');
+    cfgEls.signKey       = document.getElementById('cfgSignKey');
+    cfgEls.userDomain    = document.getElementById('cfgUserDomain');
+    cfgEls.subdomain     = document.getElementById('cfgSubdomain');
+
+    loadConfig();
+
+    // Prefill from .dev.vars / wrangler.toml (server-side) for any fields not already set
+    fetch('/config').then(r => r.json()).then(proj => {
+      const mapping = {
+        apiToken: 'apiToken',
+        zoneId: 'zoneId',
+        kvNamespaceId: 'kvNamespaceId',
+        webhookUrl: 'webhookUrl',
+      };
+      for (const [projKey, cfgKey] of Object.entries(mapping)) {
+        if (proj[projKey] && cfgEls[cfgKey] && !cfgEls[cfgKey].value) {
+          cfgEls[cfgKey].value = proj[projKey];
+        }
+      }
+      saveConfig();
+      updateDomainPreview();
+    }).catch(() => {});
+
+    Object.values(cfgEls).forEach(el => el.addEventListener('input', () => {
+      saveConfig();
+      updateDomainPreview();
+      updateSignKeyFeedback();
+    }));
+
+    // Show sign key feedback immediately on load
+    updateSignKeyFeedback();
+
+    document.getElementById('newHostname').addEventListener('keydown', e => {
+      if (e.key === 'Enter') doCreate();
+    });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer(); });
+
+    updateDomainPreview();
+
+    try {
+      requireConfig();
+      loadSubdomains();
+    } catch {
+      document.getElementById('configPanel').open = true;
+      document.getElementById('tableBody').innerHTML = '<tr><td colspan="5"><div class="empty-state"><div class="icon">&#9881;</div><p>Fill in your Cloudflare config above to get started.</p></div></td></tr>';
+    }
+  });
+</script>
+</body>
+</html>
