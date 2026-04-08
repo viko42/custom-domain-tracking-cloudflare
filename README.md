@@ -4,7 +4,10 @@
 
 A Cloudflare Workers-based system that lets your users track email opens and link clicks through their own custom domains, improving deliverability, branding, and domain reputation.
 
-> **Note:** A frontend dashboard is included for testing and demonstration purposes. You don't need it in production just use the SDK and Worker directly from your backend.
+> **Note:** A frontend dashboard is included for testing and demonstration purposes. You don't need it in production — just use the SDK and Worker directly from your backend. To try it locally, run:
+> ```
+> node tools/serve.mjs
+> ```
 
 ## What It Does
 
