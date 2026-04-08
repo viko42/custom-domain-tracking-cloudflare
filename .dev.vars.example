@@ -3,4 +3,4 @@ CF_ZONE_ID=your_cloudflare_zone_id
 WEBHOOK_URL=https://your-server.com/webhooks/domain-tracking
 WEBHOOK_SECRET=your_webhook_signing_secret
 WEBHOOK_DEAD_LETTER_URL=https://your-server.com/webhooks/domain-tracking/dead-letter
-TRACKING_SIGN_KEY=
+TRACKING_SIGN_KEY=<secure-random-key>
